@@ -1,6 +1,7 @@
 ﻿using IL.Terraria.World.Generation;
 using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Terraria;
 using Terraria.ID;
@@ -65,8 +66,10 @@ namespace TestMod.NPCs.BlazingBeast
         private const int maxSpeed = 10;
         private int gameTicksCount = 0;
         private int solarRayCount = 0;
+        private int summonCount = 0;
         private Phase bossPhase = Phase.chase;
-        readonly Phase[] phasesList = new Phase[] { Phase.blind, Phase.chase, Phase.solarFlare };
+        readonly Phase[] phasesList = new Phase[] { Phase.blind, Phase.chase, Phase.solarFlare, Phase.summonMinions };
+        private List<int> tinySunIds = new List<int>();
 
         private enum Phase
         {
@@ -175,14 +178,38 @@ namespace TestMod.NPCs.BlazingBeast
             }
             
         }
-
-        /*
-         * TODO not currently implemented
-         * Add to phasesList array once it is implemented should currently be unreachable
-         */
+        
         private void SummonMinionsAI(Player player)
         {
-            throw new NotImplementedException();
+            if (gameTicksCount > 60)
+            {
+                if (summonCount > 3)
+                {
+                    summonCount = 0;
+                    bossPhase = Phase.changePhase;
+                    gameTicksCount = 0;
+                    return;
+                }
+
+                // Teleport boss to directly above player
+                this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
+
+                if (AnyTinySunsRemaining() && summonCount == 0)
+                {
+                    bossPhase = Phase.changePhase;
+                    return;
+                }
+                int tinySunId = NPC.NewNPC((int)npc.position.X - 150, (int)npc.position.Y - (npc.height/2), mod.NPCType("TinySun"));
+
+                tinySunIds.Add(tinySunId);
+                
+                // Send reference info to the newly summoned npc
+                Main.npc[tinySunId].ai[0] = npc.whoAmI;
+                Main.npc[tinySunId].ai[1] = summonCount;
+
+                summonCount++;
+                gameTicksCount = 0;
+            }
         }
 
         // TODO potentially change this so it isn't just faster version of chase
@@ -197,9 +224,25 @@ namespace TestMod.NPCs.BlazingBeast
         #endregion
 
         /*
-         * Potentially move these to their own file/folder depending how many are needed for other bosses/npcs for reusability
+         * Potentially move some of these to their own file/folder depending how many are needed for other bosses/npcs for reusability
          */
         #region UtilityFunctions
+
+        private bool AnyTinySunsRemaining()
+        {
+            if (tinySunIds.Count > 0)
+            {
+                foreach (int id in tinySunIds)
+                {
+                    if (Main.npc[id].active)
+                    {
+                        return true;
+                    }
+                }
+            }
+            tinySunIds.Clear();
+            return tinySunIds.Count > 0;
+        }
 
         private void DespawnBoss(NPC boss)
         {
