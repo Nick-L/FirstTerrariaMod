@@ -68,6 +68,7 @@ namespace TestMod.NPCs.BlazingBeast
         private int solarRayCount = 0;
         private int summonCount = 0;
         private Phase bossPhase = Phase.chase;
+        private bool startOfPhase = false;
         readonly Phase[] phasesList = new Phase[] { Phase.blind, Phase.chase, Phase.solarFlare, Phase.summonMinions };
         private List<int> tinySunIds = new List<int>();
 
@@ -96,6 +97,7 @@ namespace TestMod.NPCs.BlazingBeast
                 switch (bossPhase) {
                     case Phase.changePhase:
                         this.npc.velocity = new Vector2(0, 0);
+                        startOfPhase = true;
                         bossPhase = (Phase)phasesList.GetValue(Main.rand.Next(phasesList.Length));
                         break;
                     case Phase.chase:
@@ -150,26 +152,28 @@ namespace TestMod.NPCs.BlazingBeast
 
         private void SolarRayAI(Player player)
         {
-            if(gameTicksCount > 80)
+            if(gameTicksCount > 80 || startOfPhase)
             {
-                // Teleport boss to directly above player
-                this.npc.position = new Vector2((player.position.X - (npc.width/2)), (player.position.Y - 400));
+                if (startOfPhase)
+                {
+                    // Teleport boss to directly above player
+                    this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
+                    startOfPhase = false;
+                }
 
                 Projectile.NewProjectile(npc.position.X + npc.width/2, npc.position.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
 
                 // Generate projectiles to the right and left of the boss
                 for (int i = 1; i < 8; i++)
                 {
-                    Projectile.NewProjectile(npc.position.X - (300 * i) , npc.position.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
-                    Projectile.NewProjectile(npc.position.X + (300 * i), npc.position.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
+                    Projectile.NewProjectile(npc.Center.X - (300 * i) , npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
+                    Projectile.NewProjectile(npc.Center.X + (300 * i), npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
                 }
 
+                solarRayCount++;
+
                 // Shoot solar rays 3 times then change phase
-                if (solarRayCount < 3)
-                {
-                    solarRayCount++;
-                }
-                else
+                if(solarRayCount > 3)
                 {
                     solarRayCount = 0;
                     bossPhase = Phase.changePhase;
@@ -183,7 +187,12 @@ namespace TestMod.NPCs.BlazingBeast
         {
             if (gameTicksCount > 60)
             {
-                if (summonCount > 3)
+                if(summonCount == 0)
+                {
+                    // Teleport boss to directly above player
+                    this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
+                }
+                if(summonCount > 3)
                 {
                     summonCount = 0;
                     bossPhase = Phase.changePhase;
@@ -191,11 +200,12 @@ namespace TestMod.NPCs.BlazingBeast
                     return;
                 }
 
-                // Teleport boss to directly above player
-                this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
-
                 if (AnyTinySunsRemaining() && summonCount == 0)
                 {
+                    foreach(int sunIndex in tinySunIds)
+                    {
+                        Main.npc[sunIndex].ai[3] = 1;
+                    }
                     bossPhase = Phase.changePhase;
                     return;
                 }
@@ -206,6 +216,7 @@ namespace TestMod.NPCs.BlazingBeast
                 // Send reference info to the newly summoned npc
                 Main.npc[tinySunId].ai[0] = npc.whoAmI;
                 Main.npc[tinySunId].ai[1] = summonCount;
+                Main.npc[tinySunId].ai[3] = 0;
 
                 summonCount++;
                 gameTicksCount = 0;

@@ -35,7 +35,7 @@ namespace TestMod.NPCs.BlazingBeast
             npc.defense = 8;
             // TODO Change damage once ai etc is done
             npc.damage = 1;
-            npc.boss = true;
+            npc.boss = false;
             npc.noGravity = true;
             npc.noTileCollide = true;
         }
@@ -62,7 +62,7 @@ namespace TestMod.NPCs.BlazingBeast
         private int gameTicksCount = 0;
         private bool startSpin = true;
         private Phase bossPhase = Phase.spin;
-        readonly Phase[] phasesList = new Phase[] { Phase.spin, Phase.attack };
+        readonly Phase[] phasesList = new Phase[] { Phase.spin };
 
         private enum Phase
         {
@@ -130,38 +130,39 @@ namespace TestMod.NPCs.BlazingBeast
                 switch (npc.ai[1])
                 {
                     case 0: // Left
-                        npc.position = new Vector2(masterCenter.X - 250, masterCenter.Y);
                         npc.ai[2] = 0;
                         break;
                     case 1: // Top
-                        npc.position = new Vector2(masterCenter.X, masterCenter.Y + 250);
                         npc.ai[2] = 90;
                         break;
                     case 2: // Right
-                        npc.position = new Vector2(masterCenter.X + 250, masterCenter.Y);
                         npc.ai[2] = 180;
                         break;
                     case 3: // Bottom
-                        npc.position = new Vector2(masterCenter.X, masterCenter.Y - 250);
                         npc.ai[2] = 270;
                         break;
                     default:
                         throw new Exception($"TinySun - outside of expected case npc.ai[1] was {npc.ai[1]} expected 0 - 3");
                 }
+                GetPositionFromAngle(100, npc.ai[2], masterCenter);
                 startSpin = false;
             }
             else
             {
-                if(gameTicksCount < 240)
+                if(npc.ai[3] != 1)
                 {
                     npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
                     npc.ai[2] += 2;
+                    if(npc.ai[2] > 360)
+                    {
+                        npc.ai[2] -= 360;
+                    }
                 }
                 else
                 {
+                    npc.ai[3] = 0;
                     startSpin = true;
                     bossPhase = Phase.changePhase;
-                    gameTicksCount = 0;
                 }
             }
         }
@@ -215,7 +216,7 @@ namespace TestMod.NPCs.BlazingBeast
                 xOffset *= -1;
             }
 
-            return new Vector2(circleCenter.X + xOffset, circleCenter.Y + yOffset);
+            return new Vector2(circleCenter.X + (xOffset - (this.npc.width/2)), circleCenter.Y + (yOffset - (this.npc.height/2)));
         }
 
         private double ConvertDegreesToRadians(float angleDegrees)
