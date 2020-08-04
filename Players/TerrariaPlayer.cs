@@ -151,16 +151,20 @@ namespace TestMod.Players
 
 		public override bool PreHurt(bool pvp, bool quiet, ref int damage, ref int hitDirection, ref bool crit, ref bool customDamage, ref bool playSound, ref bool genGore, ref PlayerDeathReason damageSource)
 		{
-
+			if (buff_MoneyForLife)
+			{
+				ReduceDamageWithCoins(ref damage);
+				if (damage == 0)
+				{
+					playSound = false;
+					crit = false;
+				}
+			}
 			return base.PreHurt(pvp, quiet, ref damage, ref hitDirection, ref crit, ref customDamage, ref playSound, ref genGore, ref damageSource);
 		}
 
 		public override void Hurt(bool pvp, bool quiet, double damage, int hitDirection, bool crit)
 		{
-			if (buff_MoneyForLife)
-			{
-				damage = ReduceDamageWithCoins(damage);
-			}
 			base.Hurt(pvp, quiet, damage, hitDirection, crit);
 		}
 
@@ -229,39 +233,48 @@ namespace TestMod.Players
 			base.PostSellItem(vendor, shopInventory, item);
 		}
 
-		private double ReduceDamageWithCoins(double damage)
+		private void ReduceDamageWithCoins(ref int damage)
         {
+			int count = 0;
+
             while (player.ConsumeItem(ItemID.SilverCoin))
             {
                 if (damage > 0 || damage > player.statLife)
                 {
-					damage -= 0.25f;
+					if (count > 3)
+					{
+						count = 0;
+						damage -= 1;
+					}
+                    else
+                    {
+						count++;
+                    }
                 }
                 else
                 {
-					return 0;
+					damage = 0;
+					return;
                 }
             }
             while (player.ConsumeItem(ItemID.GoldCoin))
             {
-				if (damage > 5)
+				if (damage > 5 || damage > player.statLife)
 				{
 					damage -= 1;
 				}
 				else
 				{
-					return 0;
+					return;
 				}
 			}
             while (player.ConsumeItem(ItemID.PlatinumCoin))
             {
-				if (damage > 20)
+				if (damage > 20 || damage > player.statLife)
 				{
 					damage = 0;
 				}
             }
-
-			return damage;
         }
 	}
 }
