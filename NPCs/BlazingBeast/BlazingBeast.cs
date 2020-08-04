@@ -59,6 +59,7 @@ namespace TestMod.NPCs.BlazingBeast
         public override void NPCLoot()
         {
             // TODO add loot (maybe none)
+            Item.NewItem(npc.getRect(), ItemID.PlatinumCoin);
             Main.dayTime = false;
         }
 
