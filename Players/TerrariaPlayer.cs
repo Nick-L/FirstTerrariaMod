@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Terraria;
@@ -11,16 +12,20 @@ using Terraria.DataStructures;
 using Terraria.GameInput;
 using Terraria.ID;
 using Terraria.ModLoader;
+using TestMod.Utilities;
 
 namespace TestMod.Players
 {
     public class TerrariaPlayer : ModPlayer
     {
-        // Buff references
+        // Buff and deBuff references
         public bool buff_MoneyForLife = true;
+		public bool debuff_Blinded = true;
+
 		public override void ResetEffects()
 		{
 			buff_MoneyForLife = false;
+			debuff_Blinded = false;
 
 			base.ResetEffects();
 		}
@@ -215,6 +220,10 @@ namespace TestMod.Players
 
 		public override void ModifyDrawLayers(List<PlayerLayer> layers)
 		{
+			if (debuff_Blinded)
+			{
+				layers.Add(AnimationHelper.blindingEffect);
+			}
 			base.ModifyDrawLayers(layers);
 		}
 

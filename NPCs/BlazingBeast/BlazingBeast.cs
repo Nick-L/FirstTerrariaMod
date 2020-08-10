@@ -142,11 +142,12 @@ namespace TestMod.NPCs.BlazingBeast
 
         private void BlindAI(Player player)
         {
-            // TODO Change this to use custom debuff once implemented
-            player.AddBuff(BuffID.Blackout, (60 * 5));
-            if (gameTicksCount > 60)
+            if (gameTicksCount > 20)
             {
-                gameTicksCount = 0;
+                player.AddBuff(BuffType<Buffs.Debuff_Blinded>(), (60 * 5));
+            }
+            if(gameTicksCount > 40)
+            {
                 bossPhase = Phase.changePhase;
             }
         }
