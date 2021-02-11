@@ -70,14 +70,13 @@ namespace TestMod.NPCs.BlazingBeast
         private int summonCount = 0;
         private Phase bossPhase = Phase.chase;
         private bool startOfPhase = false;
-        readonly Phase[] phasesList = new Phase[] { Phase.blind, Phase.chase, Phase.solarFlare, Phase.summonMinions };
+        readonly Phase[] phasesList = new Phase[] { Phase.chase, Phase.solarFlare, Phase.summonMinions };
         private List<int> tinySunIds = new List<int>();
 
         private enum Phase
         {
             changePhase,
             chase,
-            blind,
             solarFlare,
             summonMinions,
             enrage
@@ -93,6 +92,11 @@ namespace TestMod.NPCs.BlazingBeast
             {
                 DespawnBoss(this.npc);
             }
+            else if(npc.life < npc.lifeMax * 0.2)
+            {
+                //TODO Change visuals
+                EnrageAI(player);
+            }
             else
             {
                 switch (bossPhase) {
@@ -104,17 +108,11 @@ namespace TestMod.NPCs.BlazingBeast
                     case Phase.chase:
                         ChaseAI(player);
                         break;
-                    case Phase.blind:
-                        BlindAI(player);
-                        break;
                     case Phase.solarFlare:
                         SolarRayAI(player);
                         break;
                     case Phase.summonMinions:
                         SummonMinionsAI(player);
-                        break;
-                    case Phase.enrage:
-                        EnrageAI(player);
                         break;
                     default:
                         bossPhase = Phase.changePhase;
@@ -140,21 +138,9 @@ namespace TestMod.NPCs.BlazingBeast
             }
         }
 
-        private void BlindAI(Player player)
-        {
-            if (gameTicksCount > 20)
-            {
-                player.AddBuff(BuffType<Buffs.Debuff_Blinded>(), (60 * 5));
-            }
-            if(gameTicksCount > 40)
-            {
-                bossPhase = Phase.changePhase;
-            }
-        }
-
         private void SolarRayAI(Player player)
         {
-            if(gameTicksCount > 80 || startOfPhase)
+            if(gameTicksCount > 40 || startOfPhase)
             {
                 if (startOfPhase)
                 {
@@ -164,18 +150,19 @@ namespace TestMod.NPCs.BlazingBeast
                 }
 
                 Projectile.NewProjectile(npc.position.X + npc.width/2, npc.position.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
-
+                int offset = 0;
                 // Generate projectiles to the right and left of the boss
                 for (int i = 1; i < 8; i++)
                 {
-                    Projectile.NewProjectile(npc.Center.X - (300 * i) , npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
-                    Projectile.NewProjectile(npc.Center.X + (300 * i), npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
+                    offset += (Main.rand.Next(10) * 100) + 150;
+                    Projectile.NewProjectile(npc.Center.X - offset , npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
+                    Projectile.NewProjectile(npc.Center.X + offset, npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
                 }
 
                 solarRayCount++;
 
                 // Shoot solar rays 3 times then change phase
-                if(solarRayCount > 3)
+                if(solarRayCount > 6)
                 {
                     solarRayCount = 0;
                     bossPhase = Phase.changePhase;

@@ -167,10 +167,6 @@ namespace TestMod.NPCs.BlazingBeast
             }
         }
 
-        public override void FindFrame(int frameHeight)
-        {
-
-        }
         public override void SendExtraAI(BinaryWriter writer)
         {
 
