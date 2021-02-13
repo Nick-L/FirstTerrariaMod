@@ -287,6 +287,16 @@ namespace TestMod.NPCs.BlazingBeast
         }
         #endregion
 
+
+        public override void SendExtraAI(BinaryWriter writer)
+        {
+            writer.Write((short)gameTicksCount);
+        }
+        public override void ReceiveExtraAI(BinaryReader reader)
+        {
+            gameTicksCount = reader.ReadInt16();
+        }
+
         /*
          * Potentially move some of these to their own file/folder depending how many are needed for other bosses/npcs for reusability
          */

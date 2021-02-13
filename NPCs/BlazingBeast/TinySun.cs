@@ -75,7 +75,7 @@ namespace TestMod.NPCs.BlazingBeast
         }
 
         #region AI variables
-        private const int maxSpeed = 5;
+        private const int maxSpeed = 10;
         private int gameTicksCount = 0;
         private bool startSpin = true;
 
@@ -202,11 +202,11 @@ namespace TestMod.NPCs.BlazingBeast
 
         public override void SendExtraAI(BinaryWriter writer)
         {
-
+            writer.Write((short)gameTicksCount);
         }
         public override void ReceiveExtraAI(BinaryReader reader)
         {
-
+            gameTicksCount = reader.ReadInt16();
         }
 
         #region Utility functions
