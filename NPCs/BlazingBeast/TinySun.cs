@@ -18,6 +18,7 @@ namespace TestMod.NPCs.BlazingBeast
         public override void SetStaticDefaults()
         {
             DisplayName.SetDefault("Tiny Sun");
+            Main.npcFrameCount[npc.type] = 3;
         }
 
         public override void SetDefaults()
@@ -34,7 +35,7 @@ namespace TestMod.NPCs.BlazingBeast
             npc.lifeMax = 500;
             npc.defense = 8;
             // TODO Change damage once ai etc is done
-            npc.damage = 1;
+            npc.damage = 5;
             npc.boss = false;
             npc.noGravity = true;
             npc.noTileCollide = true;
@@ -43,7 +44,7 @@ namespace TestMod.NPCs.BlazingBeast
         public override void ScaleExpertStats(int numPlayers, float bossLifeScale)
         {
             // TODO these are placeholders change once balancing starts
-            npc.damage = 1;
+            npc.damage = 8;
             npc.lifeMax = (int)(500 + numPlayers * 50);
         }
 
@@ -57,16 +58,29 @@ namespace TestMod.NPCs.BlazingBeast
 
         }
 
+        public override void FindFrame(int frameHeight)
+        {
+            switch (npc.ai[3])
+            {
+                case (int)Phase.attack:
+                    npc.frame.Y = frameHeight;
+                    break;
+                case (int)Phase.heal:
+                    npc.frame.Y = frameHeight * 2;
+                    break;
+                default:
+                    npc.frame.Y = 0;
+                    break;
+            }
+        }
+
         #region AI variables
         private const int maxSpeed = 5;
         private int gameTicksCount = 0;
         private bool startSpin = true;
-        private Phase bossPhase = Phase.spin;
-        readonly Phase[] phasesList = new Phase[] { Phase.spin };
 
-        private enum Phase
+        public enum Phase
         {
-            changePhase,
             spin,
             attack,
             heal
@@ -84,22 +98,17 @@ namespace TestMod.NPCs.BlazingBeast
             }
             else
             {
-                switch (bossPhase)
+                switch (npc.ai[3])
                 {
-                    case Phase.changePhase:
-                        this.npc.velocity = new Vector2(0, 0);
-                        bossPhase = (Phase)phasesList.GetValue(Main.rand.Next(phasesList.Length));
-                        break;
-                    case Phase.attack:
+                    case (int)Phase.attack:
                         AttackAI(player);
                         break;
-                    case Phase.spin:
-                        SpinAI();
+                    case (int)Phase.heal:
+                        HealAI(player);
                         break;
-                    case Phase.heal:
-                        break;
+                    case (int)Phase.spin:
                     default:
-                        bossPhase = Phase.changePhase;
+                        SpinAI();
                         break;
                 }
                 gameTicksCount++;
@@ -116,7 +125,7 @@ namespace TestMod.NPCs.BlazingBeast
                 // 10% chance to change phase 
                 if (Main.rand.Next(10) > 8)
                 {
-                    bossPhase = Phase.changePhase;
+                    npc.ai[3] = (int)Phase.spin;
                 }
             }
         }
@@ -144,26 +153,50 @@ namespace TestMod.NPCs.BlazingBeast
                     default:
                         throw new Exception($"TinySun - outside of expected case npc.ai[1] was {npc.ai[1]} expected 0 - 3");
                 }
-                GetPositionFromAngle(100, npc.ai[2], masterCenter);
+                npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
                 startSpin = false;
             }
             else
             {
-                if(npc.ai[3] != 1)
+                npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
+                npc.ai[2] += 2;
+                if(npc.ai[2] > 360)
                 {
-                    npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
-                    npc.ai[2] += 2;
-                    if(npc.ai[2] > 360)
-                    {
-                        npc.ai[2] -= 360;
-                    }
+                    npc.ai[2] -= 360;
                 }
-                else
-                {
-                    npc.ai[3] = 0;
-                    startSpin = true;
-                    bossPhase = Phase.changePhase;
-                }
+
+            }
+            gameTicksCount = 0;
+        }
+
+        private void HealAI(Player player)
+        {
+            Vector2 masterCenter = Main.npc[(int)npc.ai[0]].Center;
+
+            npc.velocity = new Vector2(0, 0);
+            switch (npc.ai[1])
+            {
+                case 0: // Left
+                    npc.ai[2] = 0;
+                    break;
+                case 1: // Top
+                    npc.ai[2] = 90;
+                    break;
+                case 2: // Right
+                    npc.ai[2] = 180;
+                    break;
+                case 3: // Bottom
+                    npc.ai[2] = 270;
+                    break;
+                default:
+                    throw new Exception($"TinySun - outside of expected case npc.ai[1] was {npc.ai[1]} expected 0 - 3");
+            }
+            npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
+
+            if (gameTicksCount > 30)
+            {
+                Main.npc[(int)npc.ai[0]].life += 10;
+                gameTicksCount = 0;
             }
         }
 

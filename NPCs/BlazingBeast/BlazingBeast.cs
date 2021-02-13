@@ -23,6 +23,7 @@ namespace TestMod.NPCs.BlazingBeast
         public override void SetStaticDefaults()
         {
             DisplayName.SetDefault("Blazing Beast");
+            Main.npcFrameCount[npc.type] = 2;
         }
 
         public override void SetDefaults()
@@ -38,7 +39,7 @@ namespace TestMod.NPCs.BlazingBeast
             npc.lifeMax = 2100;
             npc.defense = 8;
             // TODO Change damage once ai etc is done
-            npc.damage = 1;
+            npc.damage = 10;
             npc.boss = true;
             npc.noGravity = true;
             npc.noTileCollide = true;
@@ -47,7 +48,7 @@ namespace TestMod.NPCs.BlazingBeast
         public override void ScaleExpertStats(int numPlayers, float bossLifeScale)
         {
             // TODO these are placeholders change once balancing starts
-            npc.damage = 1;
+            npc.damage = 15;
             npc.lifeMax = (int)(2100 * numPlayers);
         }
 
@@ -70,7 +71,9 @@ namespace TestMod.NPCs.BlazingBeast
         private int summonCount = 0;
         private Phase bossPhase = Phase.chase;
         private bool startOfPhase = false;
-        readonly Phase[] phasesList = new Phase[] { Phase.chase, Phase.solarFlare, Phase.summonMinions };
+        private bool minnionPhase = false;
+        readonly Phase[] phasesList = new Phase[] { Phase.chase, Phase.solarFlare };
+        readonly Phase[] minnionPhaseList = new Phase[] { Phase.summonMinions, Phase.commandAttack, Phase.commandHeal };
         private List<int> tinySunIds = new List<int>();
 
         private enum Phase
@@ -79,6 +82,8 @@ namespace TestMod.NPCs.BlazingBeast
             chase,
             solarFlare,
             summonMinions,
+            commandAttack,
+            commandHeal,
             enrage
         }
         #endregion
@@ -92,40 +97,71 @@ namespace TestMod.NPCs.BlazingBeast
             {
                 DespawnBoss(this.npc);
             }
-            else if(npc.life < npc.lifeMax * 0.2)
+            else
             {
-                //TODO Change visuals
-                EnrageAI(player);
+                if (npc.life < npc.lifeMax * 0.2)
+                {
+                    bossPhase = Phase.enrage;
+                    EnrageAI(player);
+                }
+                else
+                {
+                    switch (bossPhase)
+                    {
+                        case Phase.changePhase:
+                            startOfPhase = true;
+                            if (minnionPhase)
+                            {
+                                bossPhase = (Phase)minnionPhaseList.GetValue(Main.rand.Next(minnionPhaseList.Length));
+                                minnionPhase = false;
+                            }
+                            else
+                            {
+                                bossPhase = (Phase)phasesList.GetValue(Main.rand.Next(phasesList.Length));
+                                minnionPhase = true;
+                            }
+                            break;
+                        case Phase.chase:
+                            ChaseAI(player);
+                            break;
+                        case Phase.solarFlare:
+                            SolarRayAI(player);
+                            break;
+                        case Phase.summonMinions:
+                            SummonMinionsAI(player);
+                            break;
+                        case Phase.commandAttack:
+                            CommandAttackAI();
+                            break;
+                        case Phase.commandHeal:
+                            CommandHealAI();
+                            break;
+                        default:
+                            bossPhase = Phase.changePhase;
+                            break;
+                    }
+                }
+
+                gameTicksCount++;
+            }
+        }
+
+        public override void FindFrame(int frameHeight)
+        {
+            if(bossPhase == Phase.enrage)
+            {
+                npc.frame.Y = frameHeight;
             }
             else
             {
-                switch (bossPhase) {
-                    case Phase.changePhase:
-                        this.npc.velocity = new Vector2(0, 0);
-                        startOfPhase = true;
-                        bossPhase = (Phase)phasesList.GetValue(Main.rand.Next(phasesList.Length));
-                        break;
-                    case Phase.chase:
-                        ChaseAI(player);
-                        break;
-                    case Phase.solarFlare:
-                        SolarRayAI(player);
-                        break;
-                    case Phase.summonMinions:
-                        SummonMinionsAI(player);
-                        break;
-                    default:
-                        bossPhase = Phase.changePhase;
-                        break;
-                }
-                gameTicksCount++;
+                npc.frame.Y = 0;
             }
         }
 
         #region AI Phases
         private void ChaseAI(Player player)
         {
-            if (gameTicksCount > 50)
+            if (gameTicksCount > 75)
             {
                 this.npc.velocity = PathBossTowardsTarget(player.position, maxSpeed);
                 gameTicksCount = 0;
@@ -144,6 +180,7 @@ namespace TestMod.NPCs.BlazingBeast
             {
                 if (startOfPhase)
                 {
+                    this.npc.velocity = new Vector2(0, 0);
                     // Teleport boss to directly above player
                     this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
                     startOfPhase = false;
@@ -154,7 +191,7 @@ namespace TestMod.NPCs.BlazingBeast
                 // Generate projectiles to the right and left of the boss
                 for (int i = 1; i < 8; i++)
                 {
-                    offset += (Main.rand.Next(10) * 100) + 150;
+                    offset += (Main.rand.Next(10) * 50) + 25;
                     Projectile.NewProjectile(npc.Center.X - offset , npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
                     Projectile.NewProjectile(npc.Center.X + offset, npc.Center.Y, 0f, 0f, ProjectileType<SolarFlare>(), 1, 0f, Main.myPlayer, npc.whoAmI, 0);
                 }
@@ -178,6 +215,7 @@ namespace TestMod.NPCs.BlazingBeast
             {
                 if(summonCount == 0)
                 {
+                    this.npc.velocity = new Vector2(0, 0);
                     // Teleport boss to directly above player
                     this.npc.position = new Vector2((player.position.X - (npc.width / 2)), (player.position.Y - 400));
                 }
@@ -193,7 +231,7 @@ namespace TestMod.NPCs.BlazingBeast
                 {
                     foreach(int sunIndex in tinySunIds)
                     {
-                        Main.npc[sunIndex].ai[3] = 1;
+                        Main.npc[sunIndex].ai[3] = (int)TinySun.Phase.spin;
                     }
                     bossPhase = Phase.changePhase;
                     return;
@@ -205,19 +243,45 @@ namespace TestMod.NPCs.BlazingBeast
                 // Send reference info to the newly summoned npc
                 Main.npc[tinySunId].ai[0] = npc.whoAmI;
                 Main.npc[tinySunId].ai[1] = summonCount;
-                Main.npc[tinySunId].ai[3] = 0;
+                Main.npc[tinySunId].ai[3] = (int)TinySun.Phase.attack;
 
                 summonCount++;
                 gameTicksCount = 0;
             }
         }
+        private void CommandAttackAI()
+        {
+            if(gameTicksCount > 40)
+            {
+                foreach(int summonId in tinySunIds)
+                {
+                    Main.npc[summonId].ai[3] = (int)TinySun.Phase.attack;
+                }
+            }
+            bossPhase = Phase.changePhase;
+            gameTicksCount = 0;
+            return;
+        }
 
+        private void CommandHealAI()
+        {
+            if(gameTicksCount > 40)
+            {
+                foreach(int summonId in tinySunIds)
+                {
+                    Main.npc[summonId].ai[3] = (int)TinySun.Phase.heal;
+                }
+            }
+            bossPhase = Phase.changePhase;
+            gameTicksCount = 0;
+            return;
+        }
         // TODO potentially change this so it isn't just faster version of chase
         private void EnrageAI(Player player)
         {
-            if (gameTicksCount > 50)
+            if (gameTicksCount > 30)
             {
-                this.npc.velocity = PathBossTowardsTarget(player.position, maxSpeed * 5);
+                this.npc.velocity = PathBossTowardsTarget(player.position, maxSpeed * 3);
                 gameTicksCount = 0;
             }
         }
