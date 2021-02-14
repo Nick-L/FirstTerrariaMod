@@ -20,8 +20,8 @@ namespace TestMod.Projectiles.BlazingBeast
 
         public override void SetDefaults()
         {
-            projectile.width = 80;
-            projectile.height = 14;
+            projectile.width = 42;
+            projectile.height = 100;
             //The ai style of the projectile, please reference the source code of Terraria
             projectile.aiStyle = -1;
             projectile.friendly = false;
@@ -30,6 +30,7 @@ namespace TestMod.Projectiles.BlazingBeast
             projectile.penetrate = 5;
             //The live time for the projectile (60 = 1 second, so 600 is 10 seconds)
             projectile.timeLeft = 600;
+            projectile.tileCollide = false;
         }
         
         public override void ModifyHitPlayer(Player target, ref int damage, ref bool crit)

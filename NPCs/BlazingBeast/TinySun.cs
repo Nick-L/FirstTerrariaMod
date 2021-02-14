@@ -77,7 +77,8 @@ namespace TestMod.NPCs.BlazingBeast
         #region AI variables
         private const int maxSpeed = 10;
         private int gameTicksCount = 0;
-        private bool startSpin = true;
+
+        private int prevPhase = -1;
 
         public enum Phase
         {
@@ -98,7 +99,7 @@ namespace TestMod.NPCs.BlazingBeast
             }
             else
             {
-                switch (npc.ai[3])
+                switch ((int)npc.ai[3])
                 {
                     case (int)Phase.attack:
                         AttackAI(player);
@@ -112,6 +113,7 @@ namespace TestMod.NPCs.BlazingBeast
                         break;
                 }
                 gameTicksCount++;
+                prevPhase = (int)npc.ai[3];
             }
         }
 
@@ -133,7 +135,7 @@ namespace TestMod.NPCs.BlazingBeast
         private void SpinAI()
         {
             Vector2 masterCenter = Main.npc[(int)npc.ai[0]].Center;
-            if (startSpin)
+            if (prevPhase != (int)Phase.spin)
             {
                 npc.velocity = new Vector2(0,0);
                 switch (npc.ai[1])
@@ -154,7 +156,6 @@ namespace TestMod.NPCs.BlazingBeast
                         throw new Exception($"TinySun - outside of expected case npc.ai[1] was {npc.ai[1]} expected 0 - 3");
                 }
                 npc.position = GetPositionFromAngle(100, npc.ai[2], masterCenter);
-                startSpin = false;
             }
             else
             {
